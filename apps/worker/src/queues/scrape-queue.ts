@@ -3,29 +3,57 @@ import type { RedisOptions } from 'ioredis';
 import { processScrapeJob } from './processors/scrape-processor';
 import { processTriageJob } from './processors/triage-processor';
 
-function parseRedisUrl(url: string): RedisOptions {
+function getRedisOptions(): RedisOptions {
+  const url = process.env.REDIS_URL;
+  if (!url) {
+    throw new Error(
+      'REDIS_URL is not set. The worker requires Redis to function.\n' +
+        'Set REDIS_URL in your .env file (e.g. redis://localhost:6379).\n' +
+        'Start Redis locally: docker run -d -p 6379:6379 redis:7-alpine'
+    );
+  }
+
   const parsed = new URL(url);
   return {
-    host: parsed.hostname,
+    host: parsed.hostname || 'localhost',
     port: parseInt(parsed.port || '6379', 10),
     password: parsed.password || undefined,
     maxRetriesPerRequest: null,
   };
 }
 
-function getRedisOptions(): RedisOptions {
-  return parseRedisUrl(process.env.REDIS_URL!);
+let _scrapeQueue: Queue | null = null;
+let _triageQueue: Queue | null = null;
+
+export function getScrapeQueue(): Queue {
+  if (!_scrapeQueue) {
+    _scrapeQueue = new Queue('scrape', {
+      connection: getRedisOptions(),
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: { count: 100 },
+        removeOnFail: { count: 50 },
+      },
+    });
+  }
+  return _scrapeQueue;
 }
 
-export const scrapeQueue = new Queue('scrape', {
-  connection: getRedisOptions(),
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 5000 },
-    removeOnComplete: { count: 100 },
-    removeOnFail: { count: 50 },
-  },
-});
+export function getTriageQueue(): Queue {
+  if (!_triageQueue) {
+    _triageQueue = new Queue('triage', {
+      connection: getRedisOptions(),
+      defaultJobOptions: {
+        attempts: 2,
+        backoff: { type: 'exponential', delay: 3000 },
+        removeOnComplete: { count: 200 },
+        removeOnFail: { count: 50 },
+      },
+    });
+  }
+  return _triageQueue;
+}
 
 export function createScrapeWorker() {
   return new Worker('scrape', processScrapeJob, {
@@ -37,16 +65,6 @@ export function createScrapeWorker() {
     },
   });
 }
-
-export const triageQueue = new Queue('triage', {
-  connection: getRedisOptions(),
-  defaultJobOptions: {
-    attempts: 2,
-    backoff: { type: 'exponential', delay: 3000 },
-    removeOnComplete: { count: 200 },
-    removeOnFail: { count: 50 },
-  },
-});
 
 export function createTriageWorker() {
   return new Worker('triage', processTriageJob, {
@@ -68,10 +86,9 @@ export async function scheduleProfileScrape(
     const jobId = `scrape:${profileId}:${board}`;
 
     // Remove existing repeatable job if any
-    await scrapeQueue.removeRepeatableByKey(jobId);
+    await getScrapeQueue().removeRepeatableByKey(jobId);
 
-    // Add new repeatable job
-    await scrapeQueue.add(
+    await getScrapeQueue().add(
       'scrape-board',
       { profileId, board },
       {

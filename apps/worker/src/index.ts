@@ -1,9 +1,16 @@
-import { createScrapeWorker, createTriageWorker, scrapeQueue, scheduleProfileScrape } from './queues/scrape-queue';
+import { createScrapeWorker, createTriageWorker, getScrapeQueue, scheduleProfileScrape } from './queues/scrape-queue';
 import { getActiveSearchProfiles } from '@jobflow/database/queries/search-profiles';
 
-console.log('[worker] Starting JobFlow worker...');
+const requiredEnvVars = ['REDIS_URL', 'DATABASE_URL'] as const;
+for (const key of requiredEnvVars) {
+  if (!process.env[key]) {
+    console.error(`[worker] Missing required env var: ${key}`);
+    console.error('[worker] Copy .env.example to .env and fill in values, or start services via: docker-compose up postgres redis -d');
+    process.exit(1);
+  }
+}
 
-// ─── Start workers ──────────────────────────────────────────────────────────
+console.log('[worker] Starting RoleCall worker...');
 
 const scrapeWorker = createScrapeWorker();
 const triageWorker = createTriageWorker();
@@ -48,7 +55,7 @@ async function initializeSchedules() {
     for (const profile of profiles) {
       if (!profile.lastScrapedAt) {
         for (const board of profile.boards) {
-          await scrapeQueue.add('scrape-board', {
+          await getScrapeQueue().add('scrape-board', {
             profileId: profile.id,
             board,
           });
@@ -72,7 +79,7 @@ async function shutdown(signal: string) {
 
   await scrapeWorker.close();
   await triageWorker.close();
-  await scrapeQueue.close();
+  await getScrapeQueue().close();
 
   console.log('[worker] Shutdown complete');
   process.exit(0);

@@ -11,7 +11,7 @@ import {
 import { markProfileScraped } from '@jobflow/database/queries/search-profiles';
 import { generateContentHash } from '@jobflow/shared/utils';
 import { scraperRegistry } from '../../scrapers/registry';
-import { triageQueue } from '../scrape-queue';
+import { getTriageQueue } from '../scrape-queue';
 import type { ScrapedJob } from '@jobflow/shared/types';
 
 export interface ScrapeJobData {
@@ -105,7 +105,7 @@ export async function processScrapeJob(job: Job<ScrapeJobData>) {
         jobsNew++;
 
         // Queue AI triage for this new job
-        await triageQueue.add('triage-job', {
+        await getTriageQueue().add('triage-job', {
           jobListingId: listing.id,
           profileId,
           userId: profile.userId,
