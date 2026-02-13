@@ -1,0 +1,30 @@
+{
+  "name": "@jobflow/database",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./client": "./src/client.ts",
+    "./schema": "./src/schema.ts",
+    "./queries/jobs": "./src/queries/jobs.ts",
+    "./queries/users": "./src/queries/users.ts",
+    "./queries/search-profiles": "./src/queries/search-profiles.ts",
+    "./queries/scrape-runs": "./src/queries/scrape-runs.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "push": "drizzle-kit push",
+    "studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.38.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0",
+    "drizzle-kit": "^0.30.0",
+    "typescript": "^5.7.0"
+  }
+}

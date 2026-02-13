@@ -1,0 +1,17 @@
+{
+  "name": "@jobflow/shared",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./types": "./src/types.ts",
+    "./constants": "./src/constants.ts",
+    "./utils": "./src/utils.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
