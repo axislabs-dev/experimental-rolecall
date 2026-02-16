@@ -160,3 +160,4 @@ Please open an issue before starting large features so we can discuss approach.
 [AGPL-3.0](LICENSE) — You're free to use, modify, and self-host RoleCall. If you deploy a modified version as a service, you must open-source your changes under the same license.
 
 For commercial licensing inquiries, reach out via the issue tracker.
+
